@@ -1,0 +1,16 @@
+# Core
+duckdb
+pandas
+numpy
+
+# ML
+scikit-learn
+
+# LLM / Agents
+langchain
+langchain-community
+langchain-ollama
+
+# API
+fastapi
+uvicorn

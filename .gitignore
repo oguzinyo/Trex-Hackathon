@@ -1,0 +1,71 @@
+# ════════════════════════════════════════════
+# CNC Anomaly Intelligence — .gitignore
+# Not: trex.duckdb commit edilir (yüklü veri ile geliyor)
+# ════════════════════════════════════════════
+
+# ── Veri seti (ayrı bir repo — organizatörden) ──
+data/uludag_hackathon_dataset/
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Virtual environments ──
+.venv/
+venv/
+env/
+ENV/
+.virtualenv/
+
+# ── Environment & secrets ──
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ── DuckDB write-ahead log (DB kendisi commit edilir, sadece WAL ignore) ──
+*.duckdb.wal
+*.duckdb.tmp
+
+# ── IDE & editors ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Claude Code (kişisel config) ──
+.claude/
+
+# ── Build & dist ──
+dist/
+build/
+*.spec
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Jupyter ──
+.ipynb_checkpoints/
+
+# ── Test coverage ──
+.coverage
+htmlcov/
+.tox/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
