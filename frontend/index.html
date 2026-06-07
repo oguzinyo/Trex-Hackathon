@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CNC Anomaly Intelligence — Multi-Agent Factory Monitoring</title>
+<meta name="description" content="CNC fabrika izleme, kök neden analizi ve OEE iyileştirme — Multi-Agent + ML + LLM">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/app.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ════════ SIDEBAR ════════ -->
+  <aside class="sidebar" aria-hidden="true"></aside>
+
+  <main class="main">
+
+  <!-- ════════ HEADER ════════ -->
+  <header class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">AI</div>
+        <div>
+          <h1><span>CNC</span> Intelligence</h1>
+          <div class="logo-sub">8-Agent RCA · OEE What-If · Critic Verified</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span class="badge badge-critical" id="badge-critical"><span class="badge-dot"></span>-- Kritik</span>
+        <span class="badge badge-accent" id="badge-problems"><span class="badge-dot"></span>17 Problem</span>
+        <span class="badge badge-good" id="badge-machines"><span class="badge-dot"></span>-- Makine</span>
+        <button class="header-btn" onclick="openCmd()" data-tip="Komut paleti">
+          <span>⌕</span> Hızlı Ara <span class="kbd">Ctrl K</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════ KPI STRIP ════════ -->
+  <div class="kpi-strip">
+    <div class="kpi" data-tip="12 makinenin tamamının ortalaması. Hayalet makineler (P=0) bu rakamı düşürüyor — gerçek üretken makinelerin OEE'si Yönetici Özeti'nde.">
+      <div class="kpi-label">Ortalama OEE <span style="color:var(--warning);font-size:9px;font-weight:700;margin-left:4px">ⓘ</span></div>
+      <div class="kpi-value" id="kpi-oee">--</div>
+      <div class="kpi-sub" id="kpi-oee-sub">Tüm 12 makine</div>
+    </div>
+    <div class="kpi" data-tip="9 ay boyunca üretilen toplam parça">
+      <div class="kpi-label">Toplam Üretim</div>
+      <div class="kpi-value" id="kpi-pieces">--</div>
+      <div class="kpi-sub">9 ay boyunca</div>
+    </div>
+    <div class="kpi" data-tip="MES'e kaydedilmiş toplam alarm sayısı">
+      <div class="kpi-label">Toplam Alarm</div>
+      <div class="kpi-value" id="kpi-alarms" style="color:var(--critical)">--</div>
+      <div class="kpi-sub">MES kayıtları</div>
+    </div>
+    <div class="kpi" data-tip="Plansız duruş toplam saati">
+      <div class="kpi-label">Duruş Saati</div>
+      <div class="kpi-value" id="kpi-downtime" style="color:var(--warning)">--</div>
+      <div class="kpi-sub">Plansız toplam</div>
+    </div>
+    <div class="kpi" data-tip="Ortalama Availability — kullanılabilirlik">
+      <div class="kpi-label">Availability</div>
+      <div class="kpi-value" id="kpi-avail">--</div>
+      <div class="kpi-sub">Ortalama A</div>
+    </div>
+  </div>
+
+  <!-- ════════ TABS ════════ -->
+  <nav class="tabs">
+    <button class="tab active" data-panel="overview">Fabrika Genel</button>
+    <button class="tab tab-live" data-panel="live">Canlı İzleme</button>
+    <button class="tab tab-agent" data-panel="agent">AI Agent</button>
+    <button class="tab tab-exec" data-panel="executive">Yönetici Özeti</button>
+    <button class="tab tab-vision" data-panel="vision">AI Operations</button>
+    <button class="tab" data-panel="problems">Problem Listesi</button>
+    <button class="tab" data-panel="whatif">What-If</button>
+    <button class="tab" data-panel="oee-trend">OEE Trend</button>
+    <button class="tab" data-panel="anomaly">ML Anomali</button>
+    <button class="tab" data-panel="predictive">Predictive ML</button>
+    <button class="tab" data-panel="data-quality">Veri Kalitesi</button>
+    <button class="tab" data-panel="compare">Karşılaştırma</button>
+    <button class="tab" data-panel="timeline">Timeline</button>
+  </nav>
+
+  <!-- ════════ PANEL: LIVE (Power BI tarzı canlı izleme) ════════ -->
+  <section class="panel" id="live">
+    <div id="live-content"></div>
+  </section>
+
+  <!-- ════════ PANEL 1: OVERVIEW ════════ -->
+  <section class="panel active" id="overview">
+    <div id="health-cards"></div>
+  </section>
+
+  <!-- ════════ PANEL 2: PROBLEMS ════════ -->
+  <section class="panel" id="problems">
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap" id="sev-filters">
+      <button class="tab active" id="filter-all" onclick="filterProblems('all',this)">Tümü</button>
+      <button class="tab" id="filter-critical" onclick="filterProblems('critical',this)" style="color:var(--critical)">Kritik</button>
+      <button class="tab" id="filter-high" onclick="filterProblems('high',this)" style="color:var(--warning)">Yüksek</button>
+      <button class="tab" id="filter-medium" onclick="filterProblems('medium',this)" style="color:var(--blue)">Orta</button>
+      <button class="tab" id="filter-data" onclick="filterByArea('data_quality',this)" style="margin-left:auto">Veri Kalitesi</button>
+      <button class="tab" id="filter-avail" onclick="filterByArea('availability',this)">Availability</button>
+      <button class="tab" id="filter-perf" onclick="filterByArea('performance',this)">Performance</button>
+      <button class="tab" id="filter-operator" onclick="filterByArea('operator_behavior',this)">Operatör</button>
+      <button class="tab" id="filter-sensor" onclick="filterByArea('sensor_coverage',this)">Sensör</button>
+    </div>
+    <div id="problem-cards"></div>
+  </section>
+
+  <!-- ════════ PANEL 3: WHAT-IF ════════ -->
+  <section class="panel" id="whatif">
+    <div class="grid g2">
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--accent-glow);color:var(--accent)">S</div> Senaryo Ayarları</div>
+        <div class="wf-control">
+          <label>Makine</label>
+          <select id="wf-machine" class="wf-select">
+            <option>Makine 1</option><option>Makine 2</option><option>Makine 3</option>
+            <option>Makine 5</option><option>Makine 7</option><option>Makine 8</option>
+            <option>Makine 9</option>
+          </select>
+        </div>
+        <div class="wf-control">
+          <label>Senaryo</label>
+          <select id="wf-scenario" class="wf-select">
+            <option value="reduce-unplanned">Plansız duruşu azalt</option>
+            <option value="reclassify-planned">System Offline → PLANNED</option>
+            <option value="fix-cycle-time">Cycle Time düzelt</option>
+            <option value="scrap-rate">Fire oranı simülasyonu</option>
+          </select>
+        </div>
+        <div class="wf-control">
+          <label>Oran: <strong id="wf-pct-label" style="color:var(--accent);font-size:16px">50%</strong></label>
+          <input type="range" id="wf-pct" class="wf-range" min="5" max="100" value="50">
+        </div>
+        <button onclick="runWhatIf()" class="wf-btn" id="wf-btn">Simülasyonu Çalıştır</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--good-bg);color:var(--good)">R</div> Sonuç</div>
+        <div id="whatif-result"><p style="color:var(--muted);text-align:center;padding:32px 0">Bir senaryo seçip çalıştırın</p></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">
+        <div class="icon" style="background:var(--warning-bg);color:var(--warning)">$</div>
+        Finansal Etki
+        <span class="info" data-tip="Veri setinde gerçek maliyet/marj bulunmadığı için bu değerler varsayımsaldır. Aşağıdan değiştirebilirsiniz.">ⓘ</span>
+      </div>
+      <div class="warning-banner" style="padding:10px 14px;background:var(--warning-bg);border:1px solid rgba(251,191,36,.2);border-radius:8px;font-size:12px;color:var(--warning);margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-weight:800">⚠</span>
+        <span>Aşağıdaki finansal değerler veri setinde bulunmayan <strong>varsayım</strong>lar üzerinden hesaplanır.</span>
+      </div>
+      <details style="margin-bottom:16px">
+        <summary style="cursor:pointer;font-size:12px;color:var(--accent);font-weight:600;padding:8px 0">⚙ Varsayımları Düzenle</summary>
+        <div class="grid g4" style="margin-top:12px">
+          <div class="wf-control" style="margin:0"><label>Marj (₺/parça)</label><input type="number" id="fa-margin" class="wf-select" value="12" step="0.5"></div>
+          <div class="wf-control" style="margin:0"><label>Makine Saati (₺)</label><input type="number" id="fa-hour" class="wf-select" value="45" step="1"></div>
+          <div class="wf-control" style="margin:0"><label>Duruş Maliyeti (₺/saat)</label><input type="number" id="fa-down" class="wf-select" value="80" step="5"></div>
+          <div class="wf-control" style="margin:0"><label>Müdahale (₺)</label><input type="number" id="fa-interv" class="wf-select" value="300" step="50"></div>
+        </div>
+      </details>
+      <div id="financial-result" class="fin-grid" style="min-height:60px"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div class="card-title"><div class="icon" style="background:var(--good-bg);color:var(--good)">C</div> Corrected OEE — Tüm Düzeltmeler Birden</div>
+      <div class="card-subtitle">System Offline + tatil duruşları PLANNED'a alınıp cycle time düzeltilirse gerçek OEE tahmini:</div>
+      <div id="corrected-oee"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL 4: OEE TREND ════════ -->
+  <section class="panel" id="oee-trend">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+        <div class="card-title" style="margin:0"><div class="icon" style="background:var(--accent-glow);color:var(--accent)">~</div> OEE Trend Analizi</div>
+        <select id="trend-machine" class="wf-select" style="width:auto;min-width:160px" onchange="loadTrend()">
+          <option>Makine 1</option><option>Makine 2</option><option>Makine 3</option>
+          <option>Makine 5</option><option>Makine 7</option><option>Makine 8</option>
+          <option>Makine 9</option>
+        </select>
+      </div>
+      <div id="trend-kpis" class="grid g3" style="margin-bottom:20px"></div>
+      <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL 5: ML ANOMALY ════════ -->
+  <section class="panel" id="anomaly">
+    <div class="grid g2">
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--critical-bg);color:var(--critical)">H</div> Sağlık Skorları</div>
+        <div class="chart-wrap" style="height:380px"><canvas id="healthChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--warning-bg);color:var(--warning)">↯</div> Sayaç Anomalileri</div>
+        <div id="counter-spikes"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title"><div class="icon" style="background:var(--blue-bg);color:var(--blue)">M</div> Mitsubishi CNC Sensör Analizi (Makine 7)</div>
+      <div class="card-subtitle">14 sensör sinyali — Cycle Time, Eksen Pozisyonu, Run Status, M-Code. Isolation Forest ile anomali tespiti.</div>
+      <div id="mitsubishi-result"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL 6: PREDICTIVE ML ════════ -->
+  <section class="panel" id="predictive">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">
+        <div class="icon" style="background:linear-gradient(135deg,var(--purple-bg),var(--accent-glow));color:var(--purple)">🤖</div>
+        Predictive Maintenance — Gerçek ML Modelleri
+      </div>
+      <div class="card-subtitle">
+        Random Forest classifier + alarm recurrence forecast. Modeller veriden eğitilir, ROC/AUC metrikleri raporlanır.
+      </div>
+    </div>
+    <div class="grid g2">
+      <div class="card" id="cycle-model-card">
+        <div class="card-title"><div class="icon" style="background:var(--accent-glow);color:var(--accent)">⚙</div> Cycle-Time Failure Model (Makine 7)</div>
+        <div id="cycle-model-content"></div>
+      </div>
+      <div class="card" id="forecast-card">
+        <div class="card-title"><div class="icon" style="background:var(--warning-bg);color:var(--warning)">⏰</div> Alarm Recurrence Forecast (Makine 1)</div>
+        <div id="forecast-content"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title"><div class="icon" style="background:var(--blue-bg);color:var(--blue)">📊</div> İstatistiksel Confidence — Veriden Hesaplanmış</div>
+      <div class="card-subtitle">Her problem için Wilson CI, sample size ve pattern konsantrasyonundan hesaplanmış güven skorları.</div>
+      <div id="conf-content"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL 7: DATA QUALITY ════════ -->
+  <section class="panel" id="data-quality">
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title"><div class="icon" style="background:var(--critical-bg);color:var(--critical)">!</div> Tespit Edilen Veri Sorunları</div>
+      <div id="dq-issues"></div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--accent-glow);color:var(--accent)">O</div> OEE Veri Kalitesi</div>
+        <div id="dq-oee"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--blue-bg);color:var(--blue)">S</div> Sensör Kapsama</div>
+        <div id="dq-sensors"></div>
+      </div>
+    </div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--warning-bg);color:var(--warning)">D</div> Duruş Sınıflandırma</div>
+        <div id="dq-stops"></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><div class="icon" style="background:var(--good-bg);color:var(--good)">C</div> Cycle Time Kalitesi</div>
+        <div id="dq-cycle"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL 7: COMPARE ════════ -->
+  <section class="panel" id="compare">
+    <div id="compare-content"></div>
+  </section>
+
+  <!-- ════════ PANEL 8: TIMELINE ════════ -->
+  <section class="panel" id="timeline">
+    <div id="timeline-content"></div>
+  </section>
+
+  <!-- ════════ PANEL 9: EXECUTIVE ════════ -->
+  <section class="panel" id="executive">
+    <div id="executive-content"></div>
+  </section>
+
+  <!-- ════════ PANEL 10: AI AGENT ════════ -->
+  <section class="panel" id="agent">
+    <div class="grid g2">
+      <div class="card">
+        <div class="card-title">
+          <div class="icon" style="background:linear-gradient(135deg,var(--accent-glow),rgba(139,92,246,.15));color:var(--accent)">A</div>
+          8-Agent Pipeline
+        </div>
+        <p class="card-subtitle">Detector → RCA → EventContext → WhatIf → Financial → Prioritizer → Reporter → Critic</p>
+        <div class="wf-control">
+          <label>Hedef Makine</label>
+          <select id="agent-machine" class="wf-select">
+            <option value="">Otomatik (en kritik)</option>
+            <option>Makine 1</option><option>Makine 2</option><option>Makine 3</option>
+            <option>Makine 5</option><option>Makine 7</option><option>Makine 8</option>
+            <option>Makine 9</option>
+          </select>
+        </div>
+        <button onclick="runAgent()" id="agent-btn" class="wf-btn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">Analizi Başlat</button>
+        <div id="agent-pipeline" style="margin-top:24px"></div>
+      </div>
+      <div class="card" style="max-height:720px;overflow-y:auto">
+        <div class="card-title">
+          <div class="icon" style="background:var(--good-bg);color:var(--good)">R</div>
+          AI Raporu
+          <span id="reporter-status-badge" style="margin-left:auto"></span>
+        </div>
+        <div id="agent-report" class="agent-report">
+          <p style="color:var(--muted);text-align:center;padding:20px 0">Analiz başlatıldığında rapor burada görünecek.</p>
+          <div style="margin-top:16px;padding:16px;background:var(--subtle);border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:12px;color:var(--muted);line-height:2">
+              <strong style="color:var(--text)">Pipeline:</strong><br>
+              <span style="color:var(--accent)">1.</span> Detector — sağlık skoru<br>
+              <span style="color:var(--accent)">2.</span> RCA — 17 problem + confidence<br>
+              <span style="color:var(--accent)">3.</span> EventContext — olay penceresi kanıtları<br>
+              <span style="color:var(--accent)">4.</span> WhatIf — RCA'ya bağlı senaryolar<br>
+              <span style="color:var(--accent)">5.</span> Financial — varsayımsal iş etkisi<br>
+              <span style="color:var(--accent)">6.</span> Prioritizer — aksiyon sıralaması<br>
+              <span style="color:var(--accent)">7.</span> Reporter — Ollama LLM Türkçe rapor<br>
+              <span style="color:var(--accent)">8.</span> Critic — rapor doğrulama ve halüsinasyon kontrolü
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px" id="agent-details-card" hidden>
+      <div class="card-title"><div class="icon" style="background:var(--blue-bg);color:var(--blue)">📊</div> Agent Çıktıları Özeti</div>
+      <div id="agent-details" class="grid g3"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px" id="event-context-card" hidden>
+      <div class="card-title"><div class="icon" style="background:var(--warning-bg);color:var(--warning)">⏱</div> Event Context — Olay Penceresi</div>
+      <div class="card-subtitle">Seçilen olayın etrafındaki alarm/duruş/iş emri/program kanıtları (±15dk)</div>
+      <div id="event-context-content"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px" id="critic-card" hidden>
+      <div class="card-title">
+        <div class="icon" style="background:var(--good-bg);color:var(--good)">✓</div>
+        Critic Review — Rapor Doğrulaması
+        <span id="critic-status-badge" style="margin-left:auto"></span>
+      </div>
+      <div class="card-subtitle">Raporu kanıt setiyle karşılaştırır, halüsinasyon ve eksik etiket tespit eder.</div>
+      <div id="critic-content"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px" id="prioritizer-card" hidden>
+      <div class="card-title"><div class="icon" style="background:linear-gradient(135deg,var(--accent2),var(--purple));color:#fff">★</div> Önceliklendirilmiş Aksiyonlar</div>
+      <div class="card-subtitle">Severity × Confidence × Impact × Feasibility skoruna göre sıralanmış:</div>
+      <div id="prioritizer-content"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PANEL: VISION ════════ -->
+  <section class="panel" id="vision">
+    <div id="vision-content"></div>
+  </section>
+
+</div>
+
+<!-- ════════ MACHINE SIDE PANEL ════════ -->
+<div class="side-overlay" id="side-overlay" onclick="closeMachinePanel()"></div>
+<aside class="side-panel" id="side-panel">
+  <div class="side-panel-header">
+    <div style="flex:1;min-width:0">
+      <div class="side-panel-title" id="sp-title">Makine</div>
+      <div class="side-panel-sub" id="sp-sub">Detaylar yükleniyor...</div>
+    </div>
+    <button class="side-panel-close" onclick="closeMachinePanel()" data-tip="Kapat (Esc)">✕</button>
+  </div>
+  <div class="side-panel-body" id="sp-body"></div>
+</aside>
+
+<!-- ════════ COMMAND PALETTE ════════ -->
+<div class="cmd-overlay" id="cmd-overlay" onclick="if(event.target===this)closeCmd()">
+  <div class="cmd-box">
+    <input type="text" id="cmd-input" class="cmd-input" placeholder="Ne aramak istersin? (örn: 'problem', 'agent', 'yazdır')" autocomplete="off">
+    <div id="cmd-list" class="cmd-list"></div>
+    <div style="padding:10px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);display:flex;justify-content:space-between">
+      <span>↑↓ ile gez · Enter ile seç</span>
+      <span>Esc ile kapat</span>
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

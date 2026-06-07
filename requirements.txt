@@ -1,0 +1,17 @@
+# Core data / OLAP
+duckdb>=1.0
+pandas>=2.0
+numpy>=1.26
+
+# Machine learning
+scikit-learn>=1.4
+
+# API / web server
+fastapi>=0.110
+uvicorn[standard]>=0.29
+pydantic>=2.0
+
+# LLM / agent reporter
+langchain>=0.2
+langchain-community>=0.2
+langchain-ollama>=0.1

@@ -1,0 +1,98 @@
+# ════════════════════════════════════════════
+# CNC Anomaly Intelligence — .gitignore
+# Not: `trex.duckdb` bilinçli olarak ignore edilmez; demo DB'si repoya eklenebilir.
+# Büyük ham CSV veri dosyaları ve lokal çalışma çıktıları ignore edilir.
+# ════════════════════════════════════════════
+
+# ── Python cache / bytecode ──
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+*.so
+.Python
+
+# ── Python packaging / tooling ──
+*.egg
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.pytype/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# ── Virtual environments ──
+.venv/
+venv/
+env/
+ENV/
+.virtualenv/
+
+# ── Environment & secrets ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+
+# ── DuckDB runtime files ──
+# `trex.duckdb` kendisi ignore edilmez.
+*.duckdb.wal
+*.duckdb.tmp
+*.duckdb-journal
+*.db.wal
+*.db-shm
+
+# ── Raw hackathon dataset ──
+# Docs/screenshots README tarafından referanslanabildiği için klasörün tamamı ignore edilmez.
+data/uludag_hackathon_dataset/.git/
+data/uludag_hackathon_dataset/*.csv
+data/uludag_hackathon_dataset/**/*.csv
+data/uludag_hackathon_dataset/archive_unused_tables/
+
+# ── Logs / runtime output ──
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# ── Node / frontend tooling (ileride build eklenirse) ──
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+.vite/
+
+# ── Jupyter / notebooks ──
+.ipynb_checkpoints/
+
+# ── IDE & editors ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── AI assistant local state ──
+.claude/
+
+# ── OS files ──
+.DS_Store
+Thumbs.db
+desktop.ini
